@@ -32,11 +32,13 @@ const ChatInput = ({
   sessionId,
   disabled,
   checkBeforeRun,
+  initialInstruction,
 }: {
   operator: Operator;
   sessionId: string;
   disabled: boolean;
   checkBeforeRun?: () => Promise<boolean>;
+  initialInstruction?: string;
 }) => {
   const {
     status,
@@ -48,6 +50,7 @@ const ChatInput = ({
   const { run, stopAgentRuning } = useRunAgent();
   const { getSession, updateSession, chatMessages } = useSession();
   const { settings, updateSetting } = useSetting();
+  const hasAutoRun = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const running = status === StatusEnum.RUNNING;
 
@@ -141,6 +144,49 @@ const ChatInput = ({
       startRun();
     }
   };
+
+  // 自动执行初始指令
+  useEffect(() => {
+    const executeInitialInstruction = async () => {
+      if (initialInstruction && !hasAutoRun.current) {
+        hasAutoRun.current = true;
+
+        // 先设置指令
+        setLocalInstructions(initialInstruction);
+
+        // 等待状态更新后再执行
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // 检查 VLM 设置
+        if (checkBeforeRun) {
+          const checked = await checkBeforeRun();
+          if (!checked) {
+            return;
+          }
+        }
+
+        // 直接使用 initialInstruction 而不是依赖 localInstructions
+        const history = chatMessages;
+        const session = await getSession(sessionId);
+
+        if (session) {
+          await updateSession(sessionId, {
+            name: initialInstruction,
+            meta: {
+              ...session.meta,
+              ...(restUserData || {}),
+            },
+          });
+        }
+
+        run(initialInstruction, history, () => {
+          // 执行完成后的回调
+        });
+      }
+    };
+
+    executeInitialInstruction();
+  }, [initialInstruction]);
 
   const isCallUser = useMemo(() => status === StatusEnum.CALL_USER, [status]);
 

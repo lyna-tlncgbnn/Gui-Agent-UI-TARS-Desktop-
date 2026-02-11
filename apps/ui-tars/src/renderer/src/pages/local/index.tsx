@@ -1,17 +1,7 @@
-import { MessageCirclePlus } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
 
 import { Card } from '@renderer/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@renderer/components/ui/tabs';
-import { Button } from '@renderer/components/ui/button';
-import { SidebarTrigger, useSidebar } from '@renderer/components/ui/sidebar';
-import { NavHeader } from '@renderer/components/Detail/NavHeader';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 
 import { useStore } from '@renderer/hooks/useStore';
@@ -28,10 +18,9 @@ import {
 import ThoughtChain from '../../components/ThoughtChain';
 import { api } from '../../api';
 import ImageGallery from '../../components/ImageGallery';
-import { PredictionParsed, StatusEnum } from '@ui-tars/shared/types';
+import { PredictionParsed } from '@ui-tars/shared/types';
 import { RouterState } from '../../typings';
 import ChatInput from '../../components/ChatInput';
-import { NavDialog } from '../../components/AlertDialog/navDialog';
 import {
   checkVLMSettings,
   LocalSettingsDialog,
@@ -48,10 +37,7 @@ const getFinishedContent = (predictionParsed?: PredictionParsed[]) =>
 
 const LocalOperator = () => {
   const state = useLocation().state as RouterState;
-  const navigate = useNavigate();
-  const { setOpen } = useSidebar();
-
-  const { status, messages = [], thinking, errorMsg } = useStore();
+  const { messages = [], thinking, errorMsg } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const suggestions: string[] = [];
   const [selectImg, setSelectImg] = useState<number | undefined>(undefined);
@@ -60,13 +46,8 @@ const LocalOperator = () => {
     currentSessionId,
     setActiveSession,
     updateMessages,
-    createSession,
     chatMessages,
   } = useSession();
-  const [pendingAction, setPendingAction] = useState<'newChat' | 'back' | null>(
-    null,
-  );
-  const [isNavDialogOpen, setNavDialogOpen] = useState(false);
   const [localOpen, setLocalOpen] = useState(false);
 
   useEffect(() => {
@@ -77,7 +58,8 @@ const LocalOperator = () => {
       }
     };
     update();
-    setOpen(false);
+    // 移除自动折叠侧边栏的逻辑
+    // setOpen(false);
   }, [state.sessionId]);
 
   useEffect(() => {
@@ -130,66 +112,6 @@ const LocalOperator = () => {
   const handleImageSelect = async (index: number) => {
     setSelectImg(index);
   };
-
-  // check status before nav
-  const needsConfirm =
-    status === StatusEnum.RUNNING ||
-    status === StatusEnum.CALL_USER ||
-    status === StatusEnum.PAUSE;
-
-  const onNewChat = useCallback(async () => {
-    const session = await createSession('New Session', {
-      operator: state.operator,
-    });
-
-    navigate('/local', {
-      state: {
-        operator: state.operator,
-        sessionId: session?.id,
-        from: 'new',
-      },
-    });
-  }, []);
-
-  const onBack = useCallback(async () => {
-    navigate('/');
-  }, []);
-
-  const handleNewChat = useCallback(() => {
-    if (needsConfirm) {
-      setPendingAction('newChat');
-      setNavDialogOpen(true);
-    } else {
-      onNewChat();
-    }
-  }, [needsConfirm]);
-
-  const handleBack = useCallback(() => {
-    if (needsConfirm) {
-      setPendingAction('back');
-      setNavDialogOpen(true);
-    } else {
-      onBack();
-    }
-  }, [needsConfirm]);
-
-  const onConfirm = useCallback(async () => {
-    await api.stopRun();
-    await api.clearHistory();
-
-    if (pendingAction === 'newChat') {
-      await onNewChat();
-    } else if (pendingAction === 'back') {
-      await onBack();
-    }
-    setPendingAction(null);
-    setNavDialogOpen(false);
-  }, [pendingAction]);
-
-  const onCancel = useCallback(() => {
-    setPendingAction(null);
-    setNavDialogOpen(false);
-  }, []);
 
   const handleLocalSettingsSubmit = async () => {
     setLocalOpen(false);
@@ -270,50 +192,28 @@ const LocalOperator = () => {
 
   return (
     <div className="flex flex-col w-full h-full">
-      <NavHeader
-        title={state.operator}
-        onBack={handleBack}
-        docUrl="https://github.com/bytedance/UI-TARS-desktop/"
-      ></NavHeader>
-      <div className="px-5 pb-5 flex flex-1 gap-5">
-        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 h-[calc(100vh-76px)]">
-          <div className="flex items-center justify-between w-full px-4">
-            <SidebarTrigger
-              variant="secondary"
-              className="size-8"
-            ></SidebarTrigger>
-            <Button variant="outline" size="sm" onClick={handleNewChat}>
-              <MessageCirclePlus />
-              New Chat
-            </Button>
+      <div className="flex flex-1 gap-5 p-5 min-h-0">
+        <Card className="flex-1 basis-2/5 flex flex-col py-4 gap-4 min-h-0">
+          <div className="flex-1 overflow-hidden min-h-0">
+            {renderChatList()}
           </div>
-          {renderChatList()}
-          <ChatInput
-            disabled={false}
-            operator={state.operator}
-            sessionId={state.sessionId}
-            checkBeforeRun={checkVLM}
+          <div className="px-4 flex-shrink-0">
+            <ChatInput
+              disabled={false}
+              operator={state.operator}
+              sessionId={state.sessionId}
+              checkBeforeRun={checkVLM}
+              initialInstruction={state.initialInstruction}
+            />
+          </div>
+        </Card>
+        <Card className="flex-1 basis-3/5 p-3 min-h-0">
+          <ImageGallery
+            messages={chatMessages}
+            selectImgIndex={selectImg}
           />
         </Card>
-        <Card className="flex-1 basis-3/5 p-3 h-[calc(100vh-76px)]">
-          <Tabs defaultValue="screenshot" className="flex-1">
-            <TabsList>
-              <TabsTrigger value="screenshot">ScreenShot</TabsTrigger>
-            </TabsList>
-            <TabsContent value="screenshot">
-              <ImageGallery
-                messages={chatMessages}
-                selectImgIndex={selectImg}
-              />
-            </TabsContent>
-          </Tabs>
-        </Card>
       </div>
-      <NavDialog
-        open={isNavDialogOpen}
-        onOpenChange={onCancel}
-        onConfirm={onConfirm}
-      />
       <LocalSettingsDialog
         isOpen={localOpen}
         onSubmit={handleLocalSettingsSubmit}

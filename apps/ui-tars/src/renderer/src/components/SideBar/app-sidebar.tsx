@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { useCallback, useState, type ComponentProps } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { Home } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { MessageSquarePlus } from 'lucide-react';
 
 import {
   Sidebar,
@@ -34,15 +34,15 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     sessions,
     getSession,
     deleteSession,
+    updateSession,
     setActiveSession,
   } = useSession();
   const navigate = useNavigate();
-  const location = useLocation();
   const { openSettings } = useGlobalSettings();
   const { status } = useStore();
   const [isNavDialogOpen, setNavDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<
-    'home' | { type: 'session'; id: string } | null
+    'newChat' | { type: 'session'; id: string } | null
   >(null);
 
   const needsConfirm =
@@ -89,14 +89,14 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     [getSession, navigate],
   );
 
-  const handleHomeClick = useCallback(() => {
+  const handleNewChatClick = useCallback(() => {
     if (needsConfirm) {
-      setPendingAction('home');
+      setPendingAction('newChat');
       setNavDialogOpen(true);
     } else {
       goHome();
     }
-  }, [needsConfirm]);
+  }, [needsConfirm, goHome]);
 
   const handleSessionClick = useCallback(
     (sessionId: string) => {
@@ -114,7 +114,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     await api.stopRun();
     await api.clearHistory();
 
-    if (pendingAction === 'home') {
+    if (pendingAction === 'newChat') {
       await goHome();
     } else if (pendingAction?.type === 'session') {
       await onSessionClick(pendingAction.id);
@@ -138,19 +138,26 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     [currentSessionId, deleteSession, goHome],
   );
 
+  const onSessionRename = useCallback(
+    async (sessionId: string, newName: string) => {
+      await updateSession(sessionId, { name: newName });
+    },
+    [updateSession],
+  );
+
   return (
     <>
       <Sidebar collapsible="icon" className="select-none" {...props}>
         <DragArea></DragArea>
         <SidebarHeader>
-          <UITarsHeader showTrigger={location.pathname === '/'} />
+          <UITarsHeader />
           <SidebarMenu className="items-center">
             <SidebarMenuButton
               className="font-medium"
-              onClick={handleHomeClick}
+              onClick={handleNewChatClick}
             >
-              <Home />
-              Home
+              <MessageSquarePlus />
+              新对话
             </SidebarMenuButton>
           </SidebarMenu>
         </SidebarHeader>
@@ -160,6 +167,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
             history={sessions}
             onSessionClick={handleSessionClick}
             onSessionDelete={onSessionDelete}
+            onSessionRename={onSessionRename}
           />
         </SidebarContent>
         <SidebarFooter className="p-0">

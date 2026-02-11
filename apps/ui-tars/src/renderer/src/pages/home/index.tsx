@@ -2,20 +2,19 @@
  * Copyright (c) 2025 Bytedance, Inc. and its affiliates.
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Info } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@renderer/components/ui/card';
 import { Button } from '@renderer/components/ui/button';
-import { Alert, AlertDescription } from '@renderer/components/ui/alert';
+import { Textarea } from '@renderer/components/ui/textarea';
 
 import { Operator } from '@main/store/types';
 import { useSession } from '../../hooks/useSession';
@@ -30,11 +29,16 @@ import { sleep } from '@ui-tars/shared/utils';
 
 import { FreeTrialDialog } from '../../components/AlertDialog/freeTrialDialog';
 import { DragArea } from '../../components/Common/drag';
-import { OPERATOR_URL_MAP } from '../../const';
 
 const Home = () => {
   const navigate = useNavigate();
   const { createSession } = useSession();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 新增状态
+  const [instruction, setInstruction] = useState('');
+  const [operatorType, setOperatorType] = useState<Operator>(Operator.LocalComputer);
+
   const [localConfig, setLocalConfig] = useState({
     open: false,
     operator: Operator.LocalComputer,
@@ -43,6 +47,13 @@ const Home = () => {
     open: false,
     operator: Operator.RemoteComputer,
   });
+
+  // 自动聚焦输入框
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
   const toRemoteComputer = async (value: 'free' | 'paid') => {
     console.log('toRemoteComputer', value);
@@ -105,7 +116,7 @@ const Home = () => {
   };
 
   /** local click logic start */
-  const toLocal = async (operator: Operator) => {
+  const toLocal = async (operator: Operator, initialInstruction?: string) => {
     const session = await createSession('New Session', {
       operator: operator,
     });
@@ -115,17 +126,34 @@ const Home = () => {
         operator: operator,
         sessionId: session?.id,
         from: 'home',
+        initialInstruction: initialInstruction, // 传递初始指令
       },
     });
   };
 
-  const handleLocalPress = async (operator: Operator) => {
+  const handleExecute = async () => {
+    if (!instruction.trim()) {
+      return;
+    }
+
     const hasVLM = await checkVLMSettings();
 
     if (hasVLM) {
-      toLocal(operator);
+      toLocal(operatorType, instruction);
     } else {
-      setLocalConfig({ open: true, operator: operator });
+      setLocalConfig({ open: true, operator: operatorType });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing) {
+      return;
+    }
+
+    // Enter to submit (without Shift)
+    if (e.key === 'Enter' && !e.shiftKey && instruction.trim()) {
+      e.preventDefault();
+      handleExecute();
     }
   };
 
@@ -146,7 +174,7 @@ const Home = () => {
 
     await sleep(200);
 
-    await toLocal(localConfig.operator);
+    await toLocal(localConfig.operator, instruction);
   };
 
   const handleLocalSettingsClose = () => {
@@ -157,96 +185,138 @@ const Home = () => {
   return (
     <div className="w-full h-full flex flex-col">
       <DragArea></DragArea>
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-semibold mt-1 mb-8">
-          Welcome to UI-TARS Desktop
+      <div className="w-full h-full flex flex-col items-center justify-center px-8">
+        {/* 标题 */}
+        <h1 className="text-2xl font-semibold mb-8">
+          欢迎使用 GUI-Agent
         </h1>
-        <Alert className="mb-4 w-[824px]">
-          <Info className="h-4 w-4 mt-2" />
-          <AlertDescription>
-            <div className="flex items-center">
-              <p className="text-sm text-muted-foreground">
-                You can also experience the remote versions on Volcano
-                Engine:&nbsp;
-              </p>
-              <Button
-                variant="link"
-                className="p-0 text-blue-500 hover:text-blue-600 hover:underline cursor-pointer"
-                onClick={() =>
-                  window.open(
-                    OPERATOR_URL_MAP[Operator.RemoteComputer].url,
-                    '_blank',
-                  )
-                }
-              >
-                Computer Operator
-              </Button>
-              <span>&nbsp;and&nbsp;</span>
-              <Button
-                variant="link"
-                className="p-0 text-blue-500 hover:text-blue-600 hover:underline cursor-pointer"
-                onClick={() =>
-                  window.open(
-                    OPERATOR_URL_MAP[Operator.RemoteBrowser].url,
-                    '_blank',
-                  )
-                }
-              >
-                Browser Operator
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-        <div className="flex gap-6">
-          <Card className="w-[400px] py-5">
-            <CardHeader className="px-5">
-              <CardTitle>Computer Operator</CardTitle>
-              <CardDescription>
-                Use the UI-TARS model to automate and complete tasks directly on
-                your computer with AI assistance.
+
+        {/* 功能说明卡片 */}
+        <div className="flex gap-6 mb-8">
+          <Card className="w-[350px] py-4">
+            <CardHeader className="px-5 pb-3">
+              <CardTitle className="text-lg">Computer Operator</CardTitle>
+              <CardDescription className="text-sm">
+                 让 AI 帮助您在本地电脑上自动化执行任务，从打开execel到整理文件.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-5">
               <img
                 src={computerUseImg}
-                alt=""
+                alt="Computer Operator"
                 className="w-full h-full aspect-video object-fill rounded-lg"
               />
             </CardContent>
-            <CardFooter className="gap-3 px-5 flex justify-between">
-              <Button
-                onClick={() => handleLocalPress(Operator.LocalComputer)}
-                className="w-full"
-              >
-                Use Local Computer
-              </Button>
-            </CardFooter>
           </Card>
-          <Card className="w-[400px] py-5">
-            <CardHeader className="px-5">
-              <CardTitle>Browser Operator</CardTitle>
-              <CardDescription>
-                Let the UI-TARS model help you automate browser tasks, from
-                navigating pages to filling out forms.
+
+          <Card className="w-[350px] py-4">
+            <CardHeader className="px-5 pb-3">
+              <CardTitle className="text-lg">Browser Operator</CardTitle>
+              <CardDescription className="text-sm">
+                让 AI 帮助您自动化执行浏览器任务，从页面导航到填写表单.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-5">
               <img
                 src={browserUseImg}
-                alt=""
+                alt="Browser Operator"
                 className="w-full h-full aspect-video object-fill rounded-lg"
               />
             </CardContent>
-            <CardFooter className="gap-3 px-5 flex justify-between">
-              <Button
-                onClick={() => handleLocalPress(Operator.LocalBrowser)}
-                className="w-full"
-              >
-                Use Local Browser
-              </Button>
-            </CardFooter>
           </Card>
         </div>
+
+        {/* 输入区域 */}
+        <div className="w-[730px] flex flex-col gap-3">
+          {/* 输入框 */}
+          <div className="relative border rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Textarea
+              ref={textareaRef}
+              placeholder="What can I do for you today?"
+              className="min-h-[56px] max-h-[200px] border-0 rounded-2xl resize-none px-4 py-4 pr-14 focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              style={{
+                height: 'auto',
+                overflow: 'hidden',
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = target.scrollHeight + 'px';
+              }}
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <Button
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={handleExecute}
+                disabled={!instruction.trim()}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* 操作类型选择 - Tab 风格 */}
+          <div className="flex items-center gap-2 px-1">
+            <button
+              onClick={() => setOperatorType(Operator.LocalComputer)}
+              className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                ${
+                  operatorType === Operator.LocalComputer
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary/50 text-secondary-foreground hover:bg-secondary'
+                }
+              `}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              Local Computer
+            </button>
+            <button
+              onClick={() => setOperatorType(Operator.LocalBrowser)}
+              className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                ${
+                  operatorType === Operator.LocalBrowser
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary/50 text-secondary-foreground hover:bg-secondary'
+                }
+              `}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                />
+              </svg>
+              Local Browser
+            </button>
+          </div>
+        </div>
+
         <LocalSettingsDialog
           isOpen={localConfig.open}
           onSubmit={handleLocalSettingsSubmit}

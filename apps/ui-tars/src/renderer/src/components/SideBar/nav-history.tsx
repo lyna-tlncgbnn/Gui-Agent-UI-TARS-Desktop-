@@ -7,9 +7,10 @@ import {
   MoreHorizontal,
   Trash2,
   History,
-  ChevronRight,
   Laptop,
   Compass,
+  Edit3,
+  Settings2,
 } from 'lucide-react';
 
 import {
@@ -39,6 +40,8 @@ import { ShareOptions } from './share';
 
 import { Operator } from '@main/store/types';
 import { DeleteSessionDialog } from '@renderer/components/AlertDialog/delSessionDialog';
+import { RenameSessionDialog } from '@renderer/components/AlertDialog/renameSessionDialog';
+import { BatchManageDialog } from '@renderer/components/AlertDialog/batchManageDialog';
 
 const getIcon = (operator: Operator, isActive: boolean) => {
   const isRemote =
@@ -65,20 +68,52 @@ export function NavHistory({
   history,
   onSessionClick,
   onSessionDelete,
+  onSessionRename,
 }: {
   currentSessionId: string;
   history: SessionItem[];
   onSessionClick: (id: string) => void;
   onSessionDelete: (id: string) => void;
+  onSessionRename?: (id: string, newName: string) => void;
 }) {
   const [isShareConfirmOpen, setIsShareConfirmOpen] = useState(false);
-  const [id, setId] = useState('');
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isBatchManageOpen, setIsBatchManageOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [selectedSessionName, setSelectedSessionName] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const { setOpen, state } = useSidebar();
 
   const handleDelete = (id: string) => {
+    setSelectedSessionId(id);
     setIsShareConfirmOpen(true);
-    setId(id);
+  };
+
+  const handleRename = (id: string, currentName: string) => {
+    setSelectedSessionId(id);
+    setSelectedSessionName(currentName);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleRenameConfirm = (newName: string) => {
+    if (onSessionRename && selectedSessionId) {
+      onSessionRename(selectedSessionId, newName);
+    }
+    setIsRenameDialogOpen(false);
+    setSelectedSessionId('');
+    setSelectedSessionName('');
+  };
+
+  const handleDeleteConfirm = () => {
+    if (selectedSessionId) {
+      onSessionDelete(selectedSessionId);
+    }
+    setIsShareConfirmOpen(false);
+    setSelectedSessionId('');
+  };
+
+  const handleBatchDelete = (sessionIds: string[]) => {
+    sessionIds.forEach(id => onSessionDelete(id));
   };
 
   const handleHistory = () => {
@@ -102,16 +137,24 @@ export function NavHistory({
             className="group/collapsible"
           >
             <SidebarMenuItem className="w-full flex flex-col items-center">
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  className="!pr-2 font-medium"
-                  onClick={handleHistory}
+              <div className="w-full flex items-center justify-between">
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    className="!pr-2 font-medium flex-1"
+                    onClick={handleHistory}
+                  >
+                    <History strokeWidth={2} />
+                    <span>最近对话</span>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <button
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  onClick={() => setIsBatchManageOpen(true)}
+                  title="管理对话记录"
                 >
-                  <History strokeWidth={2} />
-                  <span>History</span>
-                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
+                  <Settings2 className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
               <CollapsibleContent className="w-full">
                 <SidebarMenuSub className="!mr-0 !pr-1">
                   {history.map((item) => (
@@ -140,6 +183,12 @@ export function NavHistory({
                         >
                           <ShareOptions sessionId={item.id} />
                           <DropdownMenuItem
+                            onClick={() => handleRename(item.id, item.name)}
+                          >
+                            <Edit3 />
+                            <span>Rename</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             className="text-red-400 focus:bg-red-50 focus:text-red-500"
                             onClick={() => handleDelete(item.id)}
                           >
@@ -159,7 +208,19 @@ export function NavHistory({
       <DeleteSessionDialog
         open={isShareConfirmOpen}
         onOpenChange={setIsShareConfirmOpen}
-        onConfirm={() => onSessionDelete(id)}
+        onConfirm={handleDeleteConfirm}
+      />
+      <RenameSessionDialog
+        open={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        onConfirm={handleRenameConfirm}
+        currentName={selectedSessionName}
+      />
+      <BatchManageDialog
+        open={isBatchManageOpen}
+        onOpenChange={setIsBatchManageOpen}
+        history={history}
+        onBatchDelete={handleBatchDelete}
       />
     </>
   );

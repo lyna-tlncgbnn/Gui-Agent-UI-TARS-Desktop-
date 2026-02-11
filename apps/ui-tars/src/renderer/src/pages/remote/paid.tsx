@@ -10,7 +10,6 @@ import {
   TabsTrigger,
 } from '@renderer/components/ui/tabs';
 import { Button } from '@renderer/components/ui/button';
-import { SidebarTrigger } from '@renderer/components/ui/sidebar';
 import { NavHeader } from '@renderer/components/Detail/NavHeader';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 
@@ -299,11 +298,7 @@ const RemoteOperator = () => {
       </NavHeader>
       <div className="px-5 pb-5 flex flex-1 gap-5">
         <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 h-[calc(100vh-76px)]">
-          <div className="flex items-center justify-between w-full px-4">
-            <SidebarTrigger
-              variant="secondary"
-              className="size-8"
-            ></SidebarTrigger>
+          <div className="flex items-center justify-end w-full px-4">
             <Button
               variant="outline"
               size="sm"

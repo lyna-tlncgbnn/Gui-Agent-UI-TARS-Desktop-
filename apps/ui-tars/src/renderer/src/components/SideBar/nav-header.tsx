@@ -6,32 +6,41 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarTrigger,
+  useSidebar,
 } from '@renderer/components/ui/sidebar';
 
 import logoVector from '@resources/logo-vector.png?url';
 
-interface HeaderProps {
-  showTrigger: boolean;
-}
+export function UITarsHeader() {
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
-export function UITarsHeader({ showTrigger }: HeaderProps) {
   return (
     <SidebarMenu className="items-center">
-      <SidebarMenuButton
-        // size="lg"
-        className="group-data-[collapsible=icon]:p-0! mb-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-transparent"
-      >
-        <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-          <img src={logoVector} alt="" />
-        </div>
-        <div className="grid flex-1 text-left text-sm leading-tight">
-          <span className="truncate font-semibold">UI-TARS</span>
-          <span className="truncate text-xs pb-[1px]">Playground</span>
-        </div>
-      </SidebarMenuButton>
-      {showTrigger && (
-        <SidebarTrigger className="absolute top-12 right-2 group-data-[collapsible=icon]:right-[-36px]" />
-      )}
+      <div className="flex items-center justify-between w-full px-2 py-2">
+        {/* Logo 区域 - 折叠时隐藏 */}
+        {!isCollapsed && (
+          <SidebarMenuButton className="flex-1 hover:bg-transparent p-0">
+            <div className="flex items-center gap-2">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                <img src={logoVector} alt="" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">UI-TARS</span>
+                <span className="truncate text-xs pb-[1px]">Playground</span>
+              </div>
+            </div>
+          </SidebarMenuButton>
+        )}
+
+        {/* 切换按钮 - 始终显示 */}
+        <SidebarTrigger
+          className={`
+            h-8 w-8 shrink-0
+            ${isCollapsed ? 'mx-auto' : 'ml-auto'}
+          `}
+        />
+      </div>
     </SidebarMenu>
   );
 }
