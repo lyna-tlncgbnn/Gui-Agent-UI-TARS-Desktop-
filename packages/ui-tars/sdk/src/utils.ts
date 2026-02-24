@@ -55,6 +55,14 @@ export const parseBoxToScreenCoords = ({
   };
 };
 
+/**
+ * 实现滑动窗口机制，限制发送给 AI 模型的图片数量
+ * 当截图超过限制时，删除最旧的图片和对应的 <image> 占位符，只保留最新的几张
+ * @param conversations 对话消息数组
+ * @param images 截图 base64 数组
+ * @param maxImageLength 最大图片数量（默认 5）
+ * @returns 处理后的对话和图片数组
+ */
 export const processVlmParams = (
   conversations: Message[],
   images: string[],
@@ -87,6 +95,14 @@ export const processVlmParams = (
   return { images, conversations };
 };
 
+/**
+ * 将对话数据转换为 AI 视觉语言模型（VLM）能理解的格式
+ * 在第一条消息中注入系统提示词、历史对话和用户指令，并提取所有截图
+ * @param historyMessages 历史对话消息（之前的会话）
+ * @param conversations 当前对话消息（本次循环）
+ * @param systemPrompt 系统提示词（AI 的行为规则）
+ * @returns 格式化后的对话数组和提取的截图数组
+ */
 export const toVlmModelFormat = ({
   historyMessages,
   conversations,

@@ -137,24 +137,24 @@ export function NavHistory({
             className="group/collapsible"
           >
             <SidebarMenuItem className="w-full flex flex-col items-center">
-              <div className="w-full flex items-center justify-between">
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className="!pr-2 font-medium flex-1"
-                    onClick={handleHistory}
-                  >
-                    <History strokeWidth={2} />
-                    <span>最近对话</span>
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  className="font-medium w-full"
+                  onClick={handleHistory}
+                >
+                  <History strokeWidth={2} />
+                  <span>最近对话</span>
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              {state === 'expanded' && (
                 <button
-                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  className="absolute right-2 top-1.5 p-1 hover:bg-gray-100 rounded-md transition-colors z-10"
                   onClick={() => setIsBatchManageOpen(true)}
                   title="管理对话记录"
                 >
                   <Settings2 className="w-4 h-4 text-gray-500" />
                 </button>
-              </div>
+              )}
               <CollapsibleContent className="w-full">
                 <SidebarMenuSub className="!mr-0 !pr-1">
                   {history.map((item) => (

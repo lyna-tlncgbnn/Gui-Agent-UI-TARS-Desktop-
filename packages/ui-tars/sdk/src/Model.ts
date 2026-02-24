@@ -289,6 +289,7 @@ export class UITarsModel extends Model {
       `[UITarsModel] invoke: screenContext=${JSON.stringify(screenContext)}, scaleFactor=${scaleFactor}, uiTarsVersion=${uiTarsVersion}, useResponsesApi=${this.modelConfig.useResponsesApi}`,
     );
 
+    // 暂时没有使用，这里是用于图片压缩的
     const maxPixels =
       uiTarsVersion === UITarsModelVersion.V1_5
         ? MAX_PIXELS_V1_5
@@ -298,16 +299,17 @@ export class UITarsModel extends Model {
           : MAX_PIXELS_V1_0;
 
     const imageCompressionStart = Date.now();
-    const compressedImages = await Promise.all(
-      images.map((image) => preprocessResizeImage(image, maxPixels)),
-    );
+    // const compressedImages = await Promise.all(
+    //   images.map((image) => preprocessResizeImage(image, maxPixels)),
+    // );
     const imageCompressionTime = Date.now() - imageCompressionStart;
     logger?.info(`[UITarsModel] Image compression time: ${imageCompressionTime}ms for ${images.length} images`);
 
     const messageConversionStart = Date.now();
     const messages = convertToOpenAIMessages({
       conversations,
-      images: compressedImages,
+      // images: compressedImages,
+      images:images,
     });
     const messageConversionTime = Date.now() - messageConversionStart;
     logger?.info(`[UITarsModel] Message conversion time: ${messageConversionTime}ms`);

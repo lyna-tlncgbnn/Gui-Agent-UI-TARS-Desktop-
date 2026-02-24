@@ -54,7 +54,7 @@ export const runAgent = async (
   }) => {
     const lastConv = getState().messages[getState().messages.length - 1];
     const { status, conversations, ...restUserData } = data;
-    logger.info('[onGUIAgentData] status', status, conversations.length);
+    // logger.info('[onGUIAgentData] status', status, conversations.length);
 
     // add SoM to conversations
     const conversationsWithSoM: ConversationWithSoM[] = await Promise.all(
@@ -92,14 +92,14 @@ export const runAgent = async (
       screenshotBase64WithElementMarker,
       ...rest
     } = conversationsWithSoM?.[conversationsWithSoM.length - 1] || {};
-    logger.info(
-      '[onGUIAgentData] ======data======\n',
-      predictionParsed,
-      screenshotContext,
-      rest,
-      status,
-      '\n========',
-    );
+    // logger.info(
+    //   '[onGUIAgentData] ======data======\n',
+    //   predictionParsed,
+    //   screenshotContext,
+    //   rest,
+    //   status,
+    //   '\n========',
+    // );
 
     if (
       settings.operator === Operator.LocalComputer &&

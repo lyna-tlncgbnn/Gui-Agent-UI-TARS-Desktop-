@@ -183,6 +183,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         const loopStart = Date.now();
         const start = Date.now();
 
+        // 1.截图
         const snapshot = await asyncRetry(() => operator.screenshot(), {
           retries: retry?.screenshot?.maxRetries ?? 0,
           minTimeout: 5000,
@@ -190,6 +191,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         });
         const screenshotTime = Date.now() - start;
 
+        //2.获取图片基本信息
         const imageProcessStart = Date.now();
         const { width, height, mime } = await Jimp.fromBuffer(
           Buffer.from(replaceBase64Prefix(snapshot.base64), 'base64'),
@@ -214,6 +216,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
 
         let end = Date.now();
 
+        //3.把图片放入data.conversations
         if (isValidImage) {
           data.conversations.push({
             from: 'human',
@@ -243,6 +246,8 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
 
         // conversations -> messages, images
         const dataPreparationStart = Date.now();
+
+        //
         const modelFormat = toVlmModelFormat({
           historyMessages: historyMessages || [],
           conversations: data.conversations,
@@ -250,6 +255,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         });
         // sliding images window to vlm model
         const vlmParams: InvokeParams = {
+          // 删除多余的对话，只保留五条截图对话记录
           ...processVlmParams(modelFormat.conversations, modelFormat.images),
           screenContext: {
             width,
@@ -322,13 +328,6 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         logger.info(
           `[GUIAgent] consumes: >>> costTime: ${costTime}, costTokens: ${costTokens} <<<`,
         );
-        logger.info(
-          `[GUIAgent] Model invoke breakdown:\n` +
-          `  - Total model invoke time: ${modelInvokeTime}ms\n` +
-          `  - vLLM inference time: ${costTime}ms\n` +
-          `  - Network + overhead: ${networkOverhead}ms\n` +
-          `  - Images processed: ${vlmParams.images?.length || 0}`
-        );
         logger.info('[GUIAgent] Response:', prediction);
         logger.info(
           '[GUIAgent] Parsed Predictions:',
@@ -371,6 +370,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         const actionExecuteStart = Date.now();
         for (const parsedPrediction of parsedPredictions) {
           const actionType = parsedPrediction.action_type;
+
 
           logger.info('[GUIAgent] Action:', actionType);
 
