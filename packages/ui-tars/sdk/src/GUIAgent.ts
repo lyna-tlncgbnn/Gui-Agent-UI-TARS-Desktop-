@@ -15,7 +15,6 @@ import {
 import { IMAGE_PLACEHOLDER, MAX_LOOP_COUNT } from '@ui-tars/shared/constants';
 import { sleep } from '@ui-tars/shared/utils';
 import asyncRetry from 'async-retry';
-import { Jimp } from 'jimp';
 import { v4 as uuidv4 } from 'uuid';
 
 import { setContext } from './context/useContext';
@@ -191,18 +190,11 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         });
         const screenshotTime = Date.now() - start;
 
-        //2.获取图片基本信息
+        //2.获取图片基本信息（直接从 snapshot 中获取，无需解析）
         const imageProcessStart = Date.now();
-        const { width, height, mime } = await Jimp.fromBuffer(
-          Buffer.from(replaceBase64Prefix(snapshot.base64), 'base64'),
-        ).catch((e) => {
-          logger.error('[GUIAgent] screenshot error', e);
-          return {
-            width: null,
-            height: null,
-            mime: '',
-          };
-        });
+        const width = snapshot.width;
+        const height = snapshot.height;
+        const mime = snapshot.mime || 'image/png';
         const imageProcessTime = Date.now() - imageProcessStart;
 
         const isValidImage = !!(snapshot?.base64 && width && height);
@@ -328,11 +320,11 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
         logger.info(
           `[GUIAgent] consumes: >>> costTime: ${costTime}, costTokens: ${costTokens} <<<`,
         );
-        logger.info('[GUIAgent] Response:', prediction);
-        logger.info(
-          '[GUIAgent] Parsed Predictions:',
-          JSON.stringify(parsedPredictions),
-        );
+        // logger.info('[GUIAgent] Response:', prediction);
+        // logger.info(
+        //   '[GUIAgent] Parsed Predictions:',
+        //   JSON.stringify(parsedPredictions),
+        // );
 
         if (!prediction) {
           logger.error('[GUIAgent] Response Empty:', prediction);

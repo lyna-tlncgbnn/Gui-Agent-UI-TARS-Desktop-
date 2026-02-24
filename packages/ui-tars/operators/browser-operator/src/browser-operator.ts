@@ -155,9 +155,17 @@ export class BrowserOperator extends Operator {
       //   await this.uiHelper.removeClickableHighlights();
       // }
 
+      // 获取页面尺寸（逻辑分辨率）
+      const viewport = page.viewport();
+      const width = viewport?.width || 1280;
+      const height = viewport?.height || 800;
+
       const output: ScreenshotOutput = {
         base64: buffer.toString(),
         scaleFactor: deviceScaleFactor || 1,
+        width,
+        height,
+        mime: 'image/jpeg',
       };
 
       this.logger.info('Screenshot Info', {

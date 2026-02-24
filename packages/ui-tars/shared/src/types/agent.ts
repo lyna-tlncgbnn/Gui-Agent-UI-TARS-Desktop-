@@ -64,6 +64,12 @@ export interface ScreenshotResult {
   base64: string;
   /** screenshot scale factor(DPR), physical_pixels = logical_resolution * scaleFactor */
   scaleFactor: number;
+  /** image width in pixels */
+  width?: number;
+  /** image height in pixels */
+  height?: number;
+  /** image mime type, e.g., 'image/png' */
+  mime?: string;
 }
 
 export type Coords = [number, number] | [];

@@ -22,16 +22,16 @@ import {
   keyboard,
   mouse,
   sleep,
-  straightTo,
   clipboard,
 } from '@computer-use/nut-js';
 import Big from 'big.js';
 
+// 瞬移模式：直接设置鼠标位置，无移动动画
 const moveStraightTo = async (startX: number | null, startY: number | null) => {
   if (startX === null || startY === null) {
     return;
   }
-  await mouse.move(straightTo(new Point(startX, startY)));
+  await mouse.setPosition(new Point(startX, startY));
 };
 export class NutJSOperator extends Operator {
   static MANUAL = {
@@ -70,8 +70,8 @@ export class NutJSOperator extends Operator {
       data: Buffer.from(screenWithScale.data),
     });
 
-    const width = screenWithScale.width / screenWithScale.pixelDensity.scaleX;
-    const height = screenWithScale.height / screenWithScale.pixelDensity.scaleY;
+    const width = Math.floor(screenWithScale.width / screenWithScale.pixelDensity.scaleX);
+    const height = Math.floor(screenWithScale.height / screenWithScale.pixelDensity.scaleY);
 
     const physicalScreenImage = await screenWithScaleImage
       .resize({
@@ -80,9 +80,12 @@ export class NutJSOperator extends Operator {
       })
       .getBuffer('image/png'); // Use png format to avoid compression
 
-    const output = {
+    const output: ScreenshotOutput = {
       base64: physicalScreenImage.toString('base64'),
       scaleFactor,
+      width,
+      height,
+      mime: 'image/png',
     };
 
     logger?.info(
@@ -108,7 +111,8 @@ export class NutJSOperator extends Operator {
     logger.info(`[NutjsOperator Position]: (${startX}, ${startY})`);
 
     // execute configs
-    mouse.config.mouseSpeed = 3600;
+    // 提高鼠标速度：从 3600 提升到 10000 像素/秒（约 3 倍速度）
+    mouse.config.mouseSpeed = 20000;
 
     // if (startBoxStr) {
     //   const region = await nutScreen.highlight(
@@ -184,7 +188,7 @@ export class NutJSOperator extends Operator {
       case 'left_single':
         logger.info('[NutjsOperator] left_click');
         await moveStraightTo(startX, startY);
-        await sleep(100);
+        await sleep(50);  // 从 100ms 减少到 50ms
         await mouse.click(Button.LEFT);
         break;
 
@@ -192,7 +196,7 @@ export class NutJSOperator extends Operator {
       case 'double_click':
         logger.info(`[NutjsOperator] ${action_type}(${startX}, ${startY})`);
         await moveStraightTo(startX, startY);
-        await sleep(100);
+        await sleep(50);  // 从 100ms 减少到 50ms
         await mouse.doubleClick(Button.LEFT);
         break;
 
@@ -200,7 +204,7 @@ export class NutJSOperator extends Operator {
       case 'right_single':
         logger.info('[NutjsOperator] right_click');
         await moveStraightTo(startX, startY);
-        await sleep(100);
+        await sleep(50);  // 从 100ms 减少到 50ms
         await mouse.click(Button.RIGHT);
         break;
 
@@ -225,10 +229,17 @@ export class NutJSOperator extends Operator {
             logger.info(
               `[NutjsOperator] drag coordinates: startX=${startX}, startY=${startY}, endX=${endX}, endY=${endY}`,
             );
-            // 先移动鼠标到 startX, startY 位置
-            await moveStraightTo(startX, startY);
-            await sleep(100);
-            await mouse.drag(straightTo(new Point(endX, endY)));
+            // 瞬移到起始位置
+            await mouse.setPosition(new Point(startX, startY));
+            await sleep(50);
+            // 按下鼠标左键
+            await mouse.pressButton(Button.LEFT);
+            await sleep(50);
+            // 瞬移到结束位置
+            await mouse.setPosition(new Point(endX, endY));
+            await sleep(50);
+            // 释放鼠标左键
+            await mouse.releaseButton(Button.LEFT);
           }
         }
         break;

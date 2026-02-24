@@ -72,6 +72,12 @@ export type ImageDetailCalculator = (width: number, height: number) => 'low' | '
 export interface ScreenshotOutput extends ExecuteOutput {
   /** screenshot base64, `keep screenshot size as physical pixels` */
   base64: string;
+  /** image width in pixels */
+  width?: number;
+  /** image height in pixels */
+  height?: number;
+  /** image mime type, e.g., 'image/png' */
+  mime?: string;
 }
 
 /**

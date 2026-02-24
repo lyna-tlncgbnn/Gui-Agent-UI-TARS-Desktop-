@@ -49,13 +49,40 @@ export class NutJSElectronOperator extends NutJSOperator {
       scaleFactor,
     );
 
+    // 优化前的代码（已废弃）：
+    // 问题：先让 Electron 缩小到逻辑分辨率（1500x1000），然后再放大回物理分辨率（3000x2000）
+    // 这导致了两次不必要的缩放操作，严重影响性能且降低图片质量
+    // const sources = await desktopCapturer.getSources({
+    //   types: ['screen'],
+    //   thumbnailSize: {
+    //     width: Math.round(logicalSize.width),   // 1500 - 要求生成逻辑分辨率的缩略图
+    //     height: Math.round(logicalSize.height), // 1000
+    //   },
+    // });
+    // const screenshot = primarySource.thumbnail;
+    // const resized = screenshot.resize({
+    //   width: physicalSize.width,   // 3000 - 又放大回物理分辨率
+    //   height: physicalSize.height, // 2000
+    // });
+
+    // 优化后的代码：直接使用物理分辨率，避免任何缩放操作
+    // thumbnailSize 设置为物理分辨率（3000x2000），Electron 直接捕获原始尺寸
+    // 这样可以：
+    // 1. 省掉 Electron 内部的缩小操作
+    // 2. 省掉代码中的放大操作
+    // 3. 保持最佳图片质量
+    // 4. 显著提升截图速度（预计提升 50-75%）
+    const getSourcesStart = Date.now();
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: {
-        width: Math.round(logicalSize.width),
-        height: Math.round(logicalSize.height),
+        width: physicalSize.width,   // 3000 - 直接要求物理分辨率
+        height: physicalSize.height, // 2000
       },
     });
+    const getSourcesTime = Date.now() - getSourcesStart;
+    logger.info(`[screenshot] getSources time: ${getSourcesTime}ms`);
+
     const primarySource =
       sources.find(
         (source) => source.display_id === primaryDisplayId.toString(),
@@ -72,14 +99,23 @@ export class NutJSElectronOperator extends NutJSOperator {
 
     const screenshot = primarySource.thumbnail;
 
-    const resized = screenshot.resize({
-      width: physicalSize.width,
-      height: physicalSize.height,
-    });
+    // 不再需要 resize 操作，直接使用原始截图
+    // const resized = screenshot.resize({
+    //   width: physicalSize.width,
+    //   height: physicalSize.height,
+    // });
+
+    const encodeStart = Date.now();
+    const base64 = screenshot.toJPEG(75).toString('base64');
+    const encodeTime = Date.now() - encodeStart;
+    logger.info(`[screenshot] JPEG encode time: ${encodeTime}ms`);
 
     return {
-      base64: resized.toJPEG(75).toString('base64'),
+      base64,
       scaleFactor,
+      width: logicalSize.width,   // 返回逻辑分辨率供 AI 模型使用
+      height: logicalSize.height,
+      mime: 'image/jpeg',
     };
   }
 
